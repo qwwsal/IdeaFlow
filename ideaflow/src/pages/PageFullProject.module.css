@@ -1,0 +1,46 @@
+.container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  background: #f3f9f1;
+  border-radius: 15px;
+  font-family: Arial, sans-serif;
+  color: #0e490e;
+}
+
+.title {
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: #2f7a2f;
+}
+
+.cover {
+  width: 100%;
+  max-height: 400px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.filesSection {
+  margin-top: 20px;
+}
+
+.filesList {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fileItem {
+  background: #fbbb13;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #0e490e;
+  text-decoration: none;
+}
+
+.fileItem:hover {
+  background: #daa214;
+}

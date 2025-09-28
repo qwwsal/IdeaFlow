@@ -1,0 +1,155 @@
+
+body {
+background-color:#0E900E;
+}
+.header {
+  background-color: #0E900E;
+  padding: 10px 126px;
+  color: #F5F5F5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+}
+
+.navLinks a {
+  color: #F5F5F5;
+  text-decoration: none;
+}
+
+.buttonYellow {
+  font-family: 'Malik Trial';
+  color:#0E900E;
+  background-color: #FBBB13;
+  border: none;
+  border-radius: 12px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  background: #f3f9f1;
+  border-radius: 15px;
+  font-family: Arial, sans-serif;
+  color: #0e490e;
+}
+
+.title {
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: #2f7a2f;
+}
+
+.cover {
+  width: 100%;
+  max-height: 400px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.filesSection {
+  margin-top: 20px;
+}
+
+.filesList {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fileItem {
+  background: #fbbb13;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #0e490e;
+  text-decoration: none;
+}
+
+.fileItem:hover {
+  background: #daa214;
+}
+
+.acceptButton {
+  margin-top: 25px;
+  background-color: #fbbb13;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 15px;
+  color: #0e490e;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.acceptButton:hover {
+  background-color: #daa214;
+}
+
+
+.footer {
+  background-color: #0E900E;
+  color: #F5F5F5;
+  padding: 20px;
+  margin-top: 40px;
+}
+
+.footerContainer {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.footerLogo {
+  display: flex;
+}
+
+.footerLogo span {
+  color: #FBBB13;
+}
+
+.footerContacts {
+  font-size: 20px;
+}
+
+.footerContacts p {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.footerContacts a {
+  color: #D9D9D9;
+  text-decoration: underline;
+}
+
+.footerSocials {
+  font-size: 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+}
+
+.footerSocials img{
+  width: 30px;
+}
