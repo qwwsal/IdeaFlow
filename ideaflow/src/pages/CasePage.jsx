@@ -14,7 +14,7 @@ export default function CasePage() {
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:3001/cases?status=open')  // добавлен фильтр по статусу open
+    fetch('http://localhost:3001/cases?status=open')  // запрос с фильтром open
       .then(res => res.json())
       .then(data => {
         setCases(data);
@@ -39,7 +39,7 @@ export default function CasePage() {
       (userEmail?.toLowerCase() || '').includes(lowerSearch) ||
       (theme || '').toLowerCase().includes(lowerSearch);
     const matchesTopic = selectedTopics.length === 0 || selectedTopics.includes(theme);
-    const matchesStatus = status === 'open';  // фильтрация по статусу open ещё раз на клиенте, для надежности
+    const matchesStatus = status === 'open';  // на клиенте фильтруем для надежности
     return matchesSearch && matchesTopic && matchesStatus;
   });
 
@@ -123,22 +123,22 @@ export default function CasePage() {
 
         <p className={styles.projectsRecommendation}>Рекомендации для вас</p>
         <div className={styles.projectsGrid}>
-          {filteredCases.map((caseItem) => (
-            <Link to={`/cases/${caseItem.id}`} key={caseItem.id} className={styles.projectCardLink}>
-              <div className={styles.projectCard}>
-                <img
-                  className={styles.projectImage}
-                  src={`http://localhost:3001${caseItem.cover || ''}`}
-                  alt="Обложка кейса"
-                />
-                <div className={styles.projectInfo}>
-                  <div className={styles.projectPerformer}>Заказчик: {caseItem.userEmail || 'Не указан'}</div>
-                  <div className={styles.projectTopic}>Тема: {caseItem.theme}</div>
-                  <div className={styles.projectStatus}>Статус: {caseItem.status}</div>
-                </div>
-              </div>
-            </Link>
-          ))}
+          {filteredCases.map(caseItem => (
+  <Link to={`/cases/${caseItem.id}`} key={caseItem.id} className={styles.projectCardLink}>
+    <div className={styles.projectCard}>
+      <img
+        className={styles.projectImage}
+        src={`http://localhost:3001${caseItem.cover || ''}`}
+        alt="Обложка кейса"
+      />
+      <div className={styles.projectInfo}>
+        <div className={styles.projectPerformer}>Заказчик: {caseItem.userEmail || 'Не указан'}</div>
+        <div className={styles.projectTitle}>Название: {caseItem.title}</div>
+        <div className={styles.projectTopic}>Тема: {caseItem.theme || 'Не указана'}</div>
+      </div>
+    </div>
+  </Link>
+))}
         </div>
       </main>
 

@@ -20,7 +20,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [postedProjectsCases, setPostedProjectsCases] = useState([]);
+  const [projectsAsCustomer, setProjectsAsCustomer] = useState([]);
   const [completedExecutorProjects, setCompletedExecutorProjects] = useState([]);
   const [inProcessExecutorCases, setInProcessExecutorCases] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState({});
@@ -66,55 +66,67 @@ export default function ProfilePage() {
       }
     };
 
-    // Получаем проекты пользователя (заказчика)
-    const fetchPostedProjectsCases = async () => {
-      try {
-        const [projectsRes, casesRes] = await Promise.all([
-          fetch(`http://localhost:3001/projects?userId=${userId}`),
-          fetch(`http://localhost:3001/cases?userId=${userId}`),
-        ]);
-        if (!projectsRes.ok || !casesRes.ok) throw new Error('Ошибка загрузки проектов или кейсов');
-        const projectsData = await projectsRes.json();
-        const casesData = await casesRes.json();
+const fetchProjectsAsCustomer = async () => {
+  try {
+    // Получаем проекты пользоватлея
+    const resProjects = await fetch(`http://localhost:3001/projects?userId=${userId}`);
+    if (!resProjects.ok) throw new Error('Ошибка загрузки проектов как заказчика');
+    const projectsDataRaw = await resProjects.json();
 
-        let combined = [...projectsData, ...casesData];
-        combined.sort((a, b) => {
-          if (a.status === 'open' && b.status !== 'open') return -1;
-          if (a.status !== 'open' && b.status === 'open') return 1;
-          return 0;
-        });
-        setPostedProjectsCases(combined);
-      } catch {
-        setPostedProjectsCases([]);
-      }
-    };
+    // Фильтруем проекты по статусу closed
+    const projectsData = projectsDataRaw.filter(p => p.status === 'closed');
 
-    // Получаем проекты исполнителя, которые завершены (из таблицы projects)
+    // Получаем открытые кейсы
+    const resCases = await fetch(`http://localhost:3001/cases?userId=${userId}`);
+    if (!resCases.ok) throw new Error('Ошибка загрузки кейсов заказчика');
+    const casesDataRaw = await resCases.json();
+
+    // Фильтруем кейсы по статусу open
+    const casesData = casesDataRaw.filter(c => c.status === 'open');
+
+    // Объединяем кейсы и проекты
+    const combined = [...casesData, ...projectsData];
+
+    // Сортируем так, чтобы открытые кейсы были сверху
+    combined.sort((a, b) => {
+      if (a.status === 'open' && b.status !== 'open') return -1;
+      if (a.status !== 'open' && b.status === 'open') return 1;
+      return 0;
+    });
+
+    setProjectsAsCustomer(combined);
+  } catch (error) {
+    console.error('Ошибка при загрузке проектов и кейсов:', error);
+    setProjectsAsCustomer([]);
+  }
+};
+
+
+
+    // Завершенные проекты пользователя как исполнитель по executorId и статусу 'closed'
     const fetchCompletedExecutorProjects = async () => {
-      try {
-        const res = await fetch(`http://localhost:3001/projects`);
-        if (!res.ok) throw new Error('Ошибка загрузки проектов исполнителя');
-        const data = await res.json();
+   try {
+    const res = await fetch(`http://localhost:3001/projects?executorEmail=${encodeURIComponent(userEmail)}`);
+    if (!res.ok) throw new Error('Ошибка загрузки проектов исполнителя');
+    const data = await res.json();
 
-        const filtered = data.filter(
-          project => project.executorEmail === userEmail && project.status === 'completed'
-        );
+    // Оставляем только завершённые проекты
+    const closedProjects = data.filter(p => p.status === 'closed');
+    setCompletedExecutorProjects(closedProjects);
+  } catch {
+    setCompletedExecutorProjects([]);
+  }
+};
 
-        setCompletedExecutorProjects(filtered);
-      } catch {
-        setCompletedExecutorProjects([]);
-      }
-    };
-
-    // Получаем кейсы исполнителя, которые в процессе (из таблицы cases)
+    // Принятые кейсы из ProcessedCases с executorId=userId, статус 'in_process'
     const fetchInProcessExecutorCases = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/cases`);
-        if (!res.ok) throw new Error('Ошибка загрузки кейсов');
+        const res = await fetch(`http://localhost:3001/processed-cases`);
+        if (!res.ok) throw new Error('Ошибка загрузки принятых кейсов');
         const data = await res.json();
 
         const filtered = data.filter(
-          c => c.executorEmail === userEmail && c.status !== 'completed'
+          c => c.executorId === Number(userId) && c.status === 'in_process'
         );
 
         setInProcessExecutorCases(filtered);
@@ -124,11 +136,11 @@ export default function ProfilePage() {
     };
 
     fetchUserData().then(() => {
-      fetchPostedProjectsCases();
+      fetchProjectsAsCustomer();
       fetchCompletedExecutorProjects();
       fetchInProcessExecutorCases();
     });
-  }, [userId, userEmail]);
+  }, [userId]);
 
   const handleLogout = () => {
     localStorage.removeItem('userId');
@@ -190,27 +202,35 @@ export default function ProfilePage() {
     setSelectedFiles(prev => ({ ...prev, [caseId]: files }));
   };
 
-  const handleAddFiles = async caseId => {
+  const handleAddFiles = async (caseId) => {
     const files = selectedFiles[caseId];
     if (!files || files.length === 0) {
       alert('Выберите файлы для добавления');
       return;
     }
     const formData = new FormData();
-    Array.from(files).forEach(f => formData.append('extraFiles', f));
+    Array.from(files).forEach((file) => {
+      formData.append('extraFiles', file);
+    });
+
     try {
-      const response = await fetch(`http://localhost:3001/cases/${caseId}/upload-files`, {
+      const response = await fetch(`http://localhost:3001/processed-cases/${caseId}/upload-files`, {
         method: 'POST',
         body: formData,
       });
+
+      if (!response.ok) {
+        const errorResult = await response.json();
+        throw new Error(errorResult.error || 'Ошибка добавления файлов');
+      }
+
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Ошибка добавления файлов');
       alert('Файлы успешно добавлены');
-      // Обновляем текущие кейсы
-      const res = await fetch(`http://localhost:3001/cases`);
-      const data = await res.json();
-      const filtered = data.filter(c => c.executorEmail === userEmail && c.status !== 'completed');
-      setInProcessExecutorCases(filtered);
+
+      // Обновляем текущие кейсы исполнителя
+      const resCases = await fetch(`http://localhost:3001/processed-cases`);
+      const updatedCases = await resCases.json();
+      setInProcessExecutorCases(updatedCases.filter(c => c.executorId === Number(userId) && c.status === 'in_process'));
       setSelectedFiles(prev => ({ ...prev, [caseId]: null }));
     } catch (err) {
       alert('Ошибка: ' + err.message);
@@ -219,7 +239,7 @@ export default function ProfilePage() {
 
   const handleCompleteCase = async caseId => {
     try {
-      const response = await fetch(`http://localhost:3001/cases/${caseId}/complete`, {
+      const response = await fetch(`http://localhost:3001/processed-cases/${caseId}/complete`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
@@ -227,14 +247,15 @@ export default function ProfilePage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Ошибка завершения кейса');
       alert('Кейс завершён и добавлен в проекты');
-      // Обновляем списки кейсов и проектов исполнителя
-      const resCases = await fetch(`http://localhost:3001/cases`);
+
+      // Обновляем списки кейсов и проектов
+      const resCases = await fetch(`http://localhost:3001/processed-cases`);
       const dataCases = await resCases.json();
       const resProjects = await fetch(`http://localhost:3001/projects`);
       const dataProjects = await resProjects.json();
 
-      const filteredCases = dataCases.filter(c => c.executorEmail === userEmail && c.status !== 'completed');
-      const filteredProjects = dataProjects.filter(p => p.executorEmail === userEmail && p.status === 'completed');
+      const filteredCases = dataCases.filter(c => c.executorId === Number(userId) && c.status === 'in_process');
+      const filteredProjects = dataProjects.filter(p => p.executorId === Number(userId) && p.status === 'closed');
 
       setInProcessExecutorCases(filteredCases);
       setCompletedExecutorProjects(filteredProjects);
@@ -273,63 +294,79 @@ export default function ProfilePage() {
 
   const renderTabContent = () => {
     switch (activeTab) {
+      
       case 'projects':
         return (
+          <>
+          <h3 className={styles.projectsTitle}>Проекты пользователя (заказчик)</h3>
           <div className={`${styles.tabContent} ${styles.projectsTab}`}>
-            <h3>Проекты и кейсы пользователя (заказчик)</h3>
-            {postedProjectsCases.length === 0 ? (
-              <p>Пока пусто</p>
-            ) : (
-              <div className={styles.projectsGrid}>
-                {postedProjectsCases.map(p => (
-                  <div key={p.id} className={styles.projectCard}>
-                    <Link to={`/projects/${p.id}`} className={styles.projectLink}>
-                      <img
-                        src={`http://localhost:3001${p.cover || ''}`}
-                        alt={`Фото исполнителя ${p.performerEmail || p.executorEmail || 'Не указан'}`}
-                        className={styles.projectImage}
-                      />
-                      <div className={styles.projectInfo}>
-                        <div className={styles.projectPerformer}>
-                          Исполнитель: {p.performerEmail || p.executorEmail || 'Не указан'}
-                        </div>
-                        <div className={styles.projectTopic}>{p.theme || p.topic}</div>
-                        <div className={styles.projectStatus}>Статус: {p.status || 'неизвестен'}</div>
-                      </div>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            )}
+            {projectsAsCustomer.map((p) => (
+          <div key={p.id} className={styles.projectCard}>
+        {p.status === 'open' ? (
+        <Link to={`/cases/${p.id}`} className={styles.casesLink}>
+        <img
+          src={`http://localhost:3001${p.cover || ''}`}
+          alt={`Фото исполнителя ${p.executorEmail || 'Не указан'}`}
+          className={styles.projectImage}
+        />
+        <div className={styles.projectInfo}>
+          <div className={styles.projectTopic}>{p.theme || p.title}</div>
+          <div className={styles.projectTitle}>Название: {p.title}</div>
+          <div className={styles.projectStatus}>Статус: {p.status || 'неизвестен'}</div>
+        </div>
+      </Link>
+      ) : (
+      <Link to={`/projects/${p.id}`} className={styles.projectLink}>
+        <img
+          src={`http://localhost:3001${p.cover || ''}`}
+          alt={`Фото исполнителя ${p.executorEmail || 'Не указан'}`}
+          className={styles.projectImage}
+        />
+        <div className={styles.projectInfo}>
+          <div className={styles.projectPerformer}>
+            Исполнитель: {p.executorEmail || 'Не указан'}
           </div>
-        );
+          <div className={styles.projectTopic}>{p.theme || p.title}</div>
+          <div className={styles.projectTitle}>Название: {p.title}</div>
+          <div className={styles.projectStatus}>Статус: {p.status || 'неизвестен'}</div>
+        </div>
+      </Link>
+    )}
+  </div>
+))}
+          </div>
+       </> );
       case 'cases':
-        return (
-          <div className={`${styles.tabContent} ${styles.casesTab}`}>
-            <h3>Завершённые проекты пользователя (исполнитель)</h3>
-            {completedExecutorProjects.length === 0 ? (
-              <p>Пока пусто</p>
-            ) : (
-              <div className={styles.casesGrid}>
-                {completedExecutorProjects.map(proj => (
-                  <div key={proj.id} className={styles.caseCard}>
-                    <Link to={`/projects/${proj.id}`} className={styles.caseLink}>
-                      <img
-                        src={`http://localhost:3001${proj.cover || ''}`}
-                        alt={`Фото заказчика ${proj.userEmail}`}
-                        className={styles.caseImage}
-                      />
-                      <div className={styles.caseInfo}>
-                        <div className={styles.casePerformer}>{proj.userEmail}</div>
-                        <div className={styles.caseTopic}>{proj.theme}</div>
+  return (
+    <div className={`${styles.tabContent} ${styles.casesTab}`}>
+      <h3>Завершённые проекты пользователя (исполнитель)</h3>
+      {completedExecutorProjects.length === 0 ? (
+        <p>Пока пусто</p>
+      ) : (
+        <div className={styles.casesGrid}>
+          {completedExecutorProjects.map(proj => (
+            <div key={proj.id} className={styles.caseCard}>
+              <Link to={`/projects/${proj.id}`} key={proj.id} className={styles.projCardLink}>
+                  <div className={styles.projectCard}>
+                    <img
+                      className={styles.projectImage}
+                      src={`http://localhost:3001${proj.cover || ''}`}
+                      alt={`Фото исполнителя ${proj.performerEmail}`}
+                    />
+                    <div className={styles.projectInfo}>
+                        <div className={styles.projectTopic}>{proj.theme || proj.title}</div>
+                        <div className={styles.projectTitle}>Название: {proj.title}</div>
+                        <div className={styles.projectStatus}>Статус: {proj.status || 'неизвестен'}</div>
                       </div>
-                    </Link>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
+                </Link>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
       case 'reviews':
         return (
           <div className={styles.reviewContainer}>
@@ -340,7 +377,7 @@ export default function ProfilePage() {
               </span>
             </h3>
             <div className={styles.reviewListCustom}>
-              {reviews.map(r => (
+              {reviews.map((r) => (
                 <div key={r.id} className={styles.reviewItemCustom}>
                   <div className={styles.reviewPhotoCustom}>
                     {r.photo ? <img src={r.photo} alt={r.name} /> : <div className={styles.userPhotoPlaceholderCustom}></div>}
@@ -357,7 +394,7 @@ export default function ProfilePage() {
               <textarea
                 placeholder="Оставьте отзыв..."
                 value={newReviewText}
-                onChange={e => setNewReviewText(e.target.value)}
+                onChange={(e) => setNewReviewText(e.target.value)}
               />
               <div className={styles.ratingStars}>
                 {[...Array(5)].map((_, index) => {
@@ -509,8 +546,7 @@ export default function ProfilePage() {
         {renderTabContent()}
       </div>
 
-      {/* Блок с кейсами в процессе вне табов */}
-      <div style={{ marginTop: 30, marginLeft: 20, marginRight: 20 }}>
+      <div className={styles.processedCase}>
         <h3>Текущие кейсы в процессе</h3>
         {inProcessExecutorCases.length === 0 ? (
           <p>Нет текущих кейсов</p>
@@ -518,19 +554,20 @@ export default function ProfilePage() {
           <div className={styles.casesGrid}>
             {inProcessExecutorCases.map(c => (
               <div key={c.id} className={styles.caseCard}>
-                <Link to={`/cases/${c.id}`} className={styles.caseLink}>
+                <Link to={`/processed-cases/${c.id}`} className={styles.caseLink}>
                   <img
                     src={`http://localhost:3001${c.cover || ''}`}
                     alt={`Фото заказчика ${c.userEmail}`}
                     className={styles.caseImage}
                   />
                   <div className={styles.caseInfo}>
-                    <div className={styles.casePerformer}>{c.userEmail}</div>
+                    <div className={styles.casePerformer}>{c.userEmail || 'Не указан'}</div>
                     <div className={styles.caseTopic}>{c.theme}</div>
+                    <div className={styles.caseTitle}>{c.title}</div>
                   </div>
                 </Link>
                 <div style={{ marginTop: 10 }}>
-                  <input type="file" multiple onChange={e => handleFileSelect(c.id, e)} />
+                  <input type="file" multiple onChange={(e) => handleFileSelect(c.id, e)} />
                   <button onClick={() => handleAddFiles(c.id)}>Дополнить</button>
                   <button onClick={() => handleCompleteCase(c.id)}>Готово</button>
                 </div>
@@ -564,3 +601,4 @@ export default function ProfilePage() {
     </>
   );
 }
+

@@ -11,22 +11,27 @@ export default function HomePage() {
   const userId = localStorage.getItem('userId');
 
   useEffect(() => {
-    // Загрузить выполненные проекты
-    fetch('http://localhost:3001/projects')
-      .then(res => res.json())
-      .then(data => {
-        setDoneProjects(data.filter(p => p.status === 'completed'));
-      })
-      .catch(() => setDoneProjects([]));
+  // Загрузить завершенные проекты
+  fetch('http://localhost:3001/projects')
+    .then(res => res.json())
+    .then(data => {
+      const closedProjects = data.filter(p => p.status === 'closed');
+      // Берём последние 3 записи
+      setDoneProjects(closedProjects.slice(-3));
+    })
+    .catch(() => setDoneProjects([]));
 
-    // Загрузить открытые кейсы
-    fetch('http://localhost:3001/cases')
-      .then(res => res.json())
-      .then(data => {
-        setOpenProjects(data.filter(c => c.status === 'open'));
-      })
-      .catch(() => setOpenProjects([]));
-  }, []);
+  // Загрузить открытые кейсы
+  fetch('http://localhost:3001/cases')
+    .then(res => res.json())
+    .then(data => {
+      const openCases = data.filter(c => c.status === 'open');
+      // Берём последние 3 записи
+      setOpenProjects(openCases.slice(-3));
+    })
+    .catch(() => setOpenProjects([]));
+}, []);
+
 
   const projectList = activeTab === 'done' ? doneProjects : openProjects;
 

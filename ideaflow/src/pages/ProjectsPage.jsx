@@ -124,9 +124,10 @@ export default function ProjectsPage() {
         alt={`Фото исполнителя ${project.performerEmail}`}
       />
       <div className={styles.projectInfo}>
-        <div className={styles.projectPerformer}>Исполнитель: {project.performerEmail || 'Не указан'}</div>
-        <div className={styles.projectTopic}>Тема: {project.topic}</div>
-      </div>
+          <div className={styles.projectTopic}>{project.theme || project.title}</div>
+          <div className={styles.projectTitle}>Название: {project.title}</div>
+          <div className={styles.projectStatus}>Статус: {project.status || 'неизвестен'}</div>
+        </div>
     </div>
   </Link>
 ))}

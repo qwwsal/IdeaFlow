@@ -71,6 +71,9 @@ form label {
 label p {
   margin-bottom: 10px;
 }
+p {
+  font-family: 'Geoform';
+}
 
 /* Классы для текстового инпута и текстовой области*/
 
@@ -83,7 +86,7 @@ label p {
   border-radius: 12px;
   box-sizing: border-box;
   outline: none;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: 'Geoform';
 }
 
 .textareaInput {
@@ -97,11 +100,11 @@ label p {
   box-sizing: border-box;
   outline: none;
   resize: vertical;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Geoform';
 }
 
-.fileInputStyle {
-  margin-top: 10px;
+.fileInputHidden {
+  display: none;
 }
 
 /* Класс для кнопок "Прикрепить файл" и "Выбрать обложку" */
@@ -113,11 +116,11 @@ label p {
   padding: 10px 20px;
   border-radius: 12px;
   cursor: pointer;
-  margin-right: 20px;
+  margin: 0px 30px 0px 0px;
   user-select: none;
   transition: background-color 0.3s ease;
   color: #FBBB13;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: 'Geoform';
 }
 
 .labelFileButton:hover {
@@ -175,7 +178,7 @@ label p {
 }
 
 .footerContacts p {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Geoform';
 }
 
 .footerContacts a {

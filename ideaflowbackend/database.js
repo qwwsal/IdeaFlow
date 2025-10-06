@@ -35,6 +35,24 @@ const db = new sqlite3.Database('./mydatabase.db', (err) => {
     `);
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS ProcessedCases (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        caseId INTEGER NOT NULL,
+        userId INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        theme TEXT,
+        description TEXT,
+        cover TEXT,
+        files TEXT,
+        status TEXT DEFAULT 'in_process',
+        executorEmail TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(caseId) REFERENCES Cases(id),
+        FOREIGN KEY(userId) REFERENCES Users(id)
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS Projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         caseId INTEGER NOT NULL,
@@ -44,7 +62,8 @@ const db = new sqlite3.Database('./mydatabase.db', (err) => {
         description TEXT,
         cover TEXT,
         files TEXT,
-        status TEXT DEFAULT 'completed',
+        status TEXT DEFAULT 'closed',
+        executorEmail TEXT,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(userId) REFERENCES Users(id),
         FOREIGN KEY(caseId) REFERENCES Cases(id)

@@ -110,10 +110,17 @@ background-color:#0E900E;
 /* убираем radius из css, он теперь в инлайне для каждого таба */
 
 .projectsGrid {
+  color: #0E900E;
+  font-family: 'Geoform';
+  font-weight: bold;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   padding: 0 20px;
+}
+
+.projectsGrid a{
+  text-decoration: none;
 }
 
 .projectCard {
@@ -232,7 +239,7 @@ margin:0 10% 0 10%;
 }
 
 .footerContacts p {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Geoform';
 }
 
 .footerContacts a {

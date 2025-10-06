@@ -12,11 +12,21 @@ export default function AddCasePage() {
   const navigate = useNavigate();
 
   const handleFileChange = (e) => {
-    setFiles(Array.from(e.target.files));
-  };
+  const selectedFiles = Array.from(e.target.files);
+  if (selectedFiles.length > 15) {
+    alert('Можно выбрать не более 15 файлов');
+    e.target.value = ''; // сброс выбора в input
+    return;
+  }
+  setFiles(selectedFiles);
+};
 
   const handleCoverChange = (e) => {
-    setCover(e.target.files[0]);
+    if (e.target.files.length > 0) {
+      setCover(e.target.files[0]);
+    } else {
+      setCover(null);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -57,22 +67,22 @@ export default function AddCasePage() {
 
   return (
     <>
-     <header className={styles.header}>
-                   <Link to="/">
-                     <img src="images/logosmall.svg" alt="IdeaFlow logo" style={{ height: 80 }} />
-                   </Link>
-                   <nav className={styles.navLinks}>
-                     <Link to="/profile">Профиль</Link>
-                     <Link to="/cases">Кейсы</Link>
-                     <Link to="/projects">Проекты</Link>
-                     <Link to="/profile">
-                       <button className={styles.buttonYellow}>Разместить проект</button>
-                     </Link>
-                     <Link to="/cases">
-                       <button className={styles.buttonYellow}>Приступить к проекту</button>
-                     </Link>
-                   </nav>
-                 </header>
+      <header className={styles.header}>
+        <Link to="/">
+          <img src="images/logosmall.svg" alt="IdeaFlow logo" style={{ height: 80 }} />
+        </Link>
+        <nav className={styles.navLinks}>
+          <Link to="/profile">Профиль</Link>
+          <Link to="/cases">Кейсы</Link>
+          <Link to="/projects">Проекты</Link>
+          <Link to="/profile">
+            <button className={styles.buttonYellow}>Разместить проект</button>
+          </Link>
+          <Link to="/cases">
+            <button className={styles.buttonYellow}>Приступить к проекту</button>
+          </Link>
+        </nav>
+      </header>
 
       <div className={styles.innerContainer}>
         <h2>Описание проекта</h2>
@@ -106,7 +116,9 @@ export default function AddCasePage() {
               className={styles.textareaInput}
             />
           </label>
-          <label className={styles.labelFileButton} htmlFor="attachFiles">
+
+          {/* Кнопка для выбора файлов */}
+          <label htmlFor="attachFiles" className={styles.labelFileButton}>
             Прикрепить файлы (до 15)
           </label>
           <input
@@ -114,17 +126,26 @@ export default function AddCasePage() {
             id="attachFiles"
             multiple
             onChange={handleFileChange}
-            className={styles.fileInputStyle}
+            className={styles.fileInputHidden}
           />
-          <label className={styles.labelFileButton} htmlFor="selectCover">
+          {files.length > 0 && (
+            <p>Выбрано файлов: {files.length}</p>
+          )}
+
+          {/* Кнопка для выбора обложки */}
+          <label htmlFor="selectCover" className={styles.labelFileButton}>
             Выбрать обложку
           </label>
           <input
             type="file"
             id="selectCover"
             onChange={handleCoverChange}
-            className={styles.fileInputStyle}
+            className={styles.fileInputHidden}
           />
+          {cover && (
+            <p>Выбрана обложка: {cover.name}</p>
+          )}
+
           <button type="submit" className={styles.submitButton}>
             Разместить проект
           </button>

@@ -120,30 +120,15 @@ app.post('/cases', uploadCaseFiles, (req, res) => {
 // Получение кейсов с фильтрацией
 app.get('/cases', (req, res) => {
   const userId = req.query.userId;
-  const executorId = req.query.executorId;
-  let sql = `
-    SELECT Cases.*, Users.email as userEmail
-    FROM Cases
-    LEFT JOIN Users ON Cases.userId = Users.id
-  `;
+  let sql = `SELECT Cases.*, Users.email as userEmail FROM Cases LEFT JOIN Users ON Cases.userId = Users.id`;
   const params = [];
-  const conditions = [];
   if (userId) {
-    conditions.push('Cases.userId = ?');
+    sql += ' WHERE Cases.userId = ?';
     params.push(userId);
-  }
-  if (executorId) {
-    conditions.push('Cases.executorId = ?');
-    params.push(executorId);
-  }
-  if (conditions.length) {
-    sql += ' WHERE ' + conditions.join(' AND ');
   }
   db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ error: 'Ошибка при получении кейсов' });
-    rows.forEach(row => {
-      row.files = row.files ? JSON.parse(row.files) : [];
-    });
+    rows.forEach(row => { row.files = row.files ? JSON.parse(row.files) : []; });
     res.json(rows);
   });
 });
@@ -151,12 +136,7 @@ app.get('/cases', (req, res) => {
 // Детали кейса
 app.get('/cases/:id', (req, res) => {
   const id = req.params.id;
-  const sql = `
-    SELECT Cases.*, Users.email as userEmail
-    FROM Cases
-    LEFT JOIN Users ON Cases.userId = Users.id
-    WHERE Cases.id = ?
-  `;
+  const sql = `SELECT Cases.*, Users.email as userEmail FROM Cases LEFT JOIN Users ON Cases.userId = Users.id WHERE Cases.id = ?`;
   db.get(sql, [id], (err, row) => {
     if (err) {
       console.error('Ошибка при получении кейса:', err);
@@ -168,92 +148,121 @@ app.get('/cases/:id', (req, res) => {
   });
 });
 
-// Принять кейс
-app.put('/cases/:id/accept', (req, res) => {
+// Принять кейс (перенос в ProcessedCases)
+app.put('/cases/:id/accept', async (req, res) => {
   const caseId = Number(req.params.id);
   const { executorId } = req.body;
-
-  console.log('Принятие кейса:', { caseId, executorId });
-
-  if (!executorId || typeof executorId !== 'number' || isNaN(executorId)) {
-    console.error('executorId отсутствует или не число:', executorId);
-    return res.status(400).json({ error: 'executorId обязателен и должен быть числом' });
+  if (!executorId || isNaN(caseId)) {
+    return res.status(400).json({ error: 'Неверные параметры' });
   }
-  if (!caseId || isNaN(caseId)) {
-    console.error('caseId отсутствует или не число:', caseId);
-    return res.status(400).json({ error: 'Неверный id кейса' });
-  }
+  try {
+    const caseRow = await new Promise((resolve, reject) =>
+      db.get('SELECT * FROM Cases WHERE id = ?', [caseId], (err, row) => err ? reject(err) : resolve(row))
+    );
+    if (!caseRow) return res.status(404).json({ error: 'Кейс не найден' });
 
-  const sql = 'UPDATE Cases SET status = ?, executorId = ? WHERE id = ?';
+    const userRow = await new Promise((resolve, reject) =>
+      db.get('SELECT email FROM Users WHERE id = ?', [executorId], (err, row) => err ? reject(err) : resolve(row))
+    );
+    const executorEmail = userRow ? userRow.email : null;
 
-  db.run(sql, ['in_process', executorId, caseId], function (err) {
-    if (err) {
-      console.error('Ошибка обновления кейса:', err);
-      return res.status(500).json({ error: 'Ошибка обновления кейса' });
-    }
-    if (this.changes === 0) {
-      console.warn('Кейс для обновления не найден:', caseId);
-      return res.status(404).json({ error: 'Кейс не найден' });
-    }
-    console.log(`Кейс ${caseId} принят исполнителем ${executorId}`);
+    await new Promise((resolve, reject) => {
+      db.run(`INSERT INTO ProcessedCases (caseId, userId, title, theme, description, cover, files, status, executorId, executorEmail)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [caseRow.id, caseRow.userId, caseRow.title, caseRow.theme, caseRow.description, caseRow.cover, caseRow.files, 'in_process', executorId, executorEmail],
+        function (err) { if (err) reject(err); else resolve(); });
+    });
+
+    await new Promise((resolve, reject) =>
+      db.run('UPDATE Cases SET status = ? WHERE id = ?', ['accepted', caseId], (err) => err ? reject(err) : resolve())
+    );
+
     res.json({ message: 'Кейс принят', caseId });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Ошибка сервера' });
+  }
+});
+
+// Получение принятых кейсов
+app.get('/processed-cases', (req, res) => {
+  let sql = `SELECT ProcessedCases.*, Users.email AS userEmail FROM ProcessedCases LEFT JOIN Users ON ProcessedCases.userId = Users.id`;
+  db.all(sql, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Ошибка при получении принятых кейсов' });
+    rows.forEach(row => { row.files = row.files ? JSON.parse(row.files) : []; });
+    res.json(rows);
   });
 });
 
-// Загрузка дополнительных файлов к кейсу
+// Детали принятого кейса
+app.get('/processed-cases/:id', (req, res) => {
+  const id = req.params.id;
+  const sql = `SELECT ProcessedCases.*, Users.email AS userEmail FROM ProcessedCases LEFT JOIN Users ON ProcessedCases.userId = Users.id WHERE ProcessedCases.id = ?`;
+  db.get(sql, [id], (err, row) => {
+    if (err) return res.status(500).json({ error: 'Ошибка при получении принятого кейса' });
+    if (!row) return res.status(404).json({ error: 'Кейс не найден' });
+    row.files = row.files ? JSON.parse(row.files) : [];
+    res.json(row);
+  });
+});
+
+// Загрузка фото профиля
+app.post('/upload-photo', upload.single('photo'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Файл не выбран' });
+  res.json({ photoPath: `/uploads/${req.file.filename}` });
+});
+
+// Загрузка файлов для принятых кейсов
 const uploadExtraFiles = upload.array('extraFiles', 15);
-app.post('/cases/:id/upload-files', uploadExtraFiles, (req, res) => {
-  const caseId = req.params.id;
+app.post('/processed-cases/:id/upload-files', uploadExtraFiles, (req, res) => {
+  const id = req.params.id;
   if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'Файлы не выбраны' });
 
-  db.get('SELECT files FROM Cases WHERE id = ?', [caseId], (err, row) => {
+  db.get('SELECT files FROM ProcessedCases WHERE id = ?', [id], (err, row) => {
     if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
     if (!row) return res.status(404).json({ error: 'Кейс не найден' });
     let existingFiles = row.files ? JSON.parse(row.files) : [];
     const newFiles = req.files.map(file => `/uploads/${file.filename}`);
     const updatedFiles = existingFiles.concat(newFiles);
 
-    db.run('UPDATE Cases SET files = ? WHERE id = ?', [JSON.stringify(updatedFiles), caseId], err => {
+    db.run('UPDATE ProcessedCases SET files = ? WHERE id = ?', [JSON.stringify(updatedFiles), id], err => {
       if (err) return res.status(500).json({ error: 'Ошибка сохранения файлов' });
       res.json({ message: 'Файлы добавлены', files: updatedFiles });
     });
   });
 });
 
-// Завершение кейса (создание проекта)
-app.put('/cases/:id/complete', (req, res) => {
-  const caseId = req.params.id;
+// Завершение принятого кейса, создание проекта и удаление из ProcessedCases
+app.put('/processed-cases/:id/complete', (req, res) => {
+  const processedCaseId = Number(req.params.id);
   const { userId, title, theme, description, cover, files } = req.body;
 
-  // Получить кейс вместе с executorId
-  db.get('SELECT * FROM Cases WHERE id = ? AND executorId = ?', [caseId, userId], (err, caseRow) => {
+  db.get('SELECT * FROM ProcessedCases WHERE id = ? AND executorId = ?', [processedCaseId, userId], (err, pCase) => {
     if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
-    if (!caseRow) return res.status(404).json({ error: 'Кейс не найден или не назначен вам' });
+    if (!pCase) return res.status(404).json({ error: 'Кейс не найден или не назначен вам' });
 
-    // Получить email исполнителя по executorId
     db.get('SELECT email FROM Users WHERE id = ?', [userId], (err, userRow) => {
       if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
+
       const executorEmail = userRow ? userRow.email : null;
 
-      // Вставить проект с executorEmail
       const stmt = db.prepare(`INSERT INTO Projects (caseId, userId, title, theme, description, cover, files, status, executorEmail)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
       stmt.run(
-        caseId,
-        userId,
-        title || caseRow.title,
-        theme || caseRow.theme,
-        description || caseRow.description,
-        cover || caseRow.cover,
-        files ? JSON.stringify(files) : caseRow.files,
-        'completed',
+        pCase.caseId,
+        pCase.userId,
+        title || pCase.title,
+        theme || pCase.theme,
+        description || pCase.description,
+        cover || pCase.cover,
+        files ? JSON.stringify(files) : pCase.files,
+        'closed',
         executorEmail,
         function (err) {
           if (err) return res.status(500).json({ error: 'Ошибка создания проекта' });
 
-          // Обновить статус кейса
-          db.run('UPDATE Cases SET status = ? WHERE id = ?', ['closed', caseId], err => {
-            if (err) return res.status(500).json({ error: 'Ошибка обновления кейса' });
+          db.run('DELETE FROM ProcessedCases WHERE id = ?', [processedCaseId], (err) => {
+            if (err) return res.status(500).json({ error: 'Ошибка удаления завершённого кейса' });
+
             res.json({ message: 'Проект успешно создан', projectId: this.lastID });
           });
         }
@@ -262,51 +271,23 @@ app.put('/cases/:id/complete', (req, res) => {
   });
 });
 
-
-// Создание проекта с загрузкой файлов
-const uploadProjectFiles = upload.fields([{ name: 'cover', maxCount: 1 }, { name: 'files', maxCount: 15 }]);
-app.post('/projects', uploadProjectFiles, (req, res) => {
-  const { caseId, userId, title, theme, description } = req.body;
-  if (!caseId || !userId || !title)
-    return res.status(400).json({ error: 'caseId, userId и title обязательны' });
-
-  let coverPath = null;
-  if (req.files.cover && req.files.cover[0])
-    coverPath = `/uploads/${req.files.cover[0].filename}`;
-
-  let filesPaths = [];
-  if (req.files.files)
-    filesPaths = req.files.files.map(file => `/uploads/${file.filename}`);
-
-  const stmt = db.prepare(`
-    INSERT INTO Projects (caseId, userId, title, theme, description, cover, files, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  stmt.run(caseId, userId, title, theme || '', description || '', coverPath, JSON.stringify(filesPaths), 'completed', function (err) {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при сохранении проекта' });
-    }
-    // Обновляем статус кейса
-    db.run('UPDATE Cases SET status = ? WHERE id = ?', ['closed', caseId]);
-    res.json({ id: this.lastID, message: 'Проект успешно создан' });
-  });
-});
-
-// Получение проектов с JOIN для получения email пользователя
+// Получение проектов
 app.get('/projects', (req, res) => {
   const userId = req.query.userId;
-  let sql = `
-    SELECT Projects.*, Users.email as userEmail
-    FROM Projects
-    LEFT JOIN Users ON Projects.userId = Users.id
-  `;
+  const userEmail = req.query.userEmail;
+  // Если есть userId - получаем проекты по userId (заказчик)
+  // Если есть userEmail - получаем проекты по executorEmail (исполнитель завершенные)
+  let sql = 'SELECT * FROM Projects';
   const params = [];
+
   if (userId) {
-    sql += ' WHERE Projects.userId = ?';
+    sql += ' WHERE userId = ?';
     params.push(userId);
+  } else if (userEmail) {
+    sql += ' WHERE executorEmail = ? AND status = "closed"';
+    params.push(userEmail);
   }
+
   db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ error: 'Ошибка при получении проектов' });
     rows.forEach(row => {
@@ -316,15 +297,10 @@ app.get('/projects', (req, res) => {
   });
 });
 
-// Получение детальной информации о проекте по id
+// Получение деталей проекта
 app.get('/projects/:id', (req, res) => {
   const id = req.params.id;
-  const sql = `
-    SELECT Projects.*, Users.email as userEmail
-    FROM Projects
-    LEFT JOIN Users ON Projects.userId = Users.id
-    WHERE Projects.id = ?
-  `;
+  const sql = `SELECT Projects.*, Users.email as userEmail FROM Projects LEFT JOIN Users ON Projects.userId = Users.id WHERE Projects.id = ?`;
   db.get(sql, [id], (err, row) => {
     if (err) {
       console.error(err);

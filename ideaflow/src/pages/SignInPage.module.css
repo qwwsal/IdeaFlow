@@ -11,7 +11,7 @@
   font-family: "Malik Trial";
 }
 input{
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Geoform';
 }
 .header {
   background-color: #0E900E;
@@ -152,7 +152,7 @@ body {
 }
 
 .footerContacts p {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Geoform';
 }
 
 .footerContacts a {
