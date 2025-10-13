@@ -33,15 +33,24 @@ export default function CasePage() {
     }
   };
 
-  const filteredCases = cases.filter(({ userEmail, theme, status }) => {
-    const lowerSearch = searchTerm.toLowerCase();
-    const matchesSearch =
-      (userEmail?.toLowerCase() || '').includes(lowerSearch) ||
-      (theme || '').toLowerCase().includes(lowerSearch);
-    const matchesTopic = selectedTopics.length === 0 || selectedTopics.includes(theme);
-    const matchesStatus = status === 'open';  // на клиенте фильтруем для надежности
-    return matchesSearch && matchesTopic && matchesStatus;
-  });
+  const filteredCases = cases.filter(({ title, theme, description, cover, files, status, executorId, userEmail }) => {
+  const lowerSearch = searchTerm.toLowerCase();
+
+  const matchesSearch =
+    (title?.toLowerCase() || '').includes(lowerSearch) ||
+    (theme?.toLowerCase() || '').includes(lowerSearch) ||
+    (description?.toLowerCase() || '').includes(lowerSearch) ||
+    (cover?.toLowerCase() || '').includes(lowerSearch) ||
+    (status?.toLowerCase() || '').includes(lowerSearch) ||
+    (executorId !== undefined ? String(executorId).includes(lowerSearch) : false) ||
+    (userEmail?.toLowerCase() || '').includes(lowerSearch);
+
+  const matchesTopic = selectedTopics.length === 0 || selectedTopics.includes(theme);
+  const matchesStatus = status === 'open'; // фильтр по статусу
+
+  return matchesSearch && matchesTopic && matchesStatus;
+});
+
 
   if (loading) return <p className={styles.loadingText}>Загрузка кейсов...</p>;
 

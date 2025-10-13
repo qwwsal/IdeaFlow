@@ -33,14 +33,24 @@ export default function ProjectsPage() {
     }
   };
 
-  const filteredProjects = projects.filter(({ performerEmail, topic }) => {
-    const lowerSearch = searchTerm.toLowerCase();
-    const matchesSearch =
-      (performerEmail?.toLowerCase() || '').includes(lowerSearch) ||
-      (topic || '').toLowerCase().includes(lowerSearch);
-    const matchesTopic = selectedTopics.length === 0 || selectedTopics.includes(topic);
-    return matchesSearch && matchesTopic;
-  });
+ const filteredProjects = projects.filter(project => {
+  const lowerSearch = searchTerm.toLowerCase();
+
+  const matchesSearch =
+    (project.title?.toLowerCase() || '').includes(lowerSearch) ||
+    (project.theme?.toLowerCase() || '').includes(lowerSearch) ||
+    (project.description?.toLowerCase() || '').includes(lowerSearch) ||
+    (project.cover?.toLowerCase() || '').includes(lowerSearch) ||
+    (project.status?.toLowerCase() || '').includes(lowerSearch) ||
+    (project.executorEmail?.toLowerCase() || '').includes(lowerSearch) ||
+    (project.performerEmail?.toLowerCase() || '').includes(lowerSearch) ||
+    (project.topic?.toLowerCase() || '').includes(lowerSearch);
+
+  const matchesTopic = selectedTopics.length === 0 || selectedTopics.includes(project.topic);
+
+  return matchesSearch && matchesTopic;
+});
+
 
   if (loading) return <p>Загрузка проектов...</p>;
 
