@@ -14,7 +14,7 @@ export default function CasePage() {
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:3001/cases?status=open')  // запрос с фильтром open
+    fetch('http://localhost:3001/cases?status=open')
       .then(res => res.json())
       .then(data => {
         setCases(data);
@@ -33,24 +33,24 @@ export default function CasePage() {
     }
   };
 
-  const filteredCases = cases.filter(({ title, theme, description, cover, files, status, executorId, userEmail }) => {
-  const lowerSearch = searchTerm.toLowerCase();
+  const filteredCases = cases.filter(({ title, theme, description, cover, files, status, executorId, userId, userEmail, executorEmail }) => {
+    const lowerSearch = searchTerm.toLowerCase();
 
-  const matchesSearch =
-    (title?.toLowerCase() || '').includes(lowerSearch) ||
-    (theme?.toLowerCase() || '').includes(lowerSearch) ||
-    (description?.toLowerCase() || '').includes(lowerSearch) ||
-    (cover?.toLowerCase() || '').includes(lowerSearch) ||
-    (status?.toLowerCase() || '').includes(lowerSearch) ||
-    (executorId !== undefined ? String(executorId).includes(lowerSearch) : false) ||
-    (userEmail?.toLowerCase() || '').includes(lowerSearch);
+    const matchesSearch =
+      (title?.toLowerCase() || '').includes(lowerSearch) ||
+      (theme?.toLowerCase() || '').includes(lowerSearch) ||
+      (description?.toLowerCase() || '').includes(lowerSearch) ||
+      (cover?.toLowerCase() || '').includes(lowerSearch) ||
+      (status?.toLowerCase() || '').includes(lowerSearch) ||
+      (executorId !== undefined ? String(executorId).includes(lowerSearch) : false) ||
+      (userEmail?.toLowerCase() || '').includes(lowerSearch) ||
+      (executorEmail?.toLowerCase() || '').includes(lowerSearch);
 
-  const matchesTopic = selectedTopics.length === 0 || selectedTopics.includes(theme);
-  const matchesStatus = status === 'open'; // фильтр по статусу
+    const matchesTopic = selectedTopics.length === 0 || selectedTopics.includes(theme);
+    const matchesStatus = status === 'open';
 
-  return matchesSearch && matchesTopic && matchesStatus;
-});
-
+    return matchesSearch && matchesTopic && matchesStatus;
+  });
 
   if (loading) return <p className={styles.loadingText}>Загрузка кейсов...</p>;
 
@@ -133,21 +133,34 @@ export default function CasePage() {
         <p className={styles.projectsRecommendation}>Рекомендации для вас</p>
         <div className={styles.projectsGrid}>
           {filteredCases.map(caseItem => (
-  <Link to={`/cases/${caseItem.id}`} key={caseItem.id} className={styles.projectCardLink}>
-    <div className={styles.projectCard}>
-      <img
-        className={styles.projectImage}
-        src={`http://localhost:3001${caseItem.cover || ''}`}
-        alt="Обложка кейса"
-      />
-      <div className={styles.projectInfo}>
-        <div className={styles.projectPerformer}>Заказчик: {caseItem.userEmail || 'Не указан'}</div>
-        <div className={styles.projectTitle}>Название: {caseItem.title}</div>
-        <div className={styles.projectTopic}>Тема: {caseItem.theme || 'Не указана'}</div>
-      </div>
-    </div>
-  </Link>
-))}
+            <Link to={`/cases/${caseItem.id}`} key={caseItem.id} className={styles.projectCardLink}>
+              <div className={styles.projectCard}>
+                <img
+                  className={styles.projectImage}
+                  src={`http://localhost:3001${caseItem.cover || ''}`}
+                  alt="Обложка кейса"
+                />
+                <div className={styles.projectInfo}>
+                  <div className={styles.projectPerformer}>
+                    Заказчик:{' '}
+                    <Link to={`/profileview/${caseItem.userId}`}>
+                      {caseItem.userEmail || 'Не указан'}
+                    </Link>
+                  </div>
+                  <div className={styles.projectTitle}>Название: {caseItem.title}</div>
+                  <div className={styles.projectTopic}>Тема: {caseItem.theme || 'Не указана'}</div>
+                  {caseItem.executorId && (
+                    <div className={styles.projectPerformer}>
+                      Исполнитель:{' '}
+                      <Link to={`/profileview/${caseItem.executorId}`}>
+                        {caseItem.executorEmail || 'Не указан'}
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
       </main>
 

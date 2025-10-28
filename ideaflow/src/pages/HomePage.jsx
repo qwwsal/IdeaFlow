@@ -173,13 +173,13 @@ export default function HomePage() {
           </div>
           <div className={styles.footerSocials}>
             <a href="#">
-              <img src="images/facebook.svg" alt="Facebook" />
+              <img src="/images/facebook.svg" alt="Facebook" />
             </a>
             <a href="#">
-              <img src="images/twitterx.svg" alt="Twitter" />
+              <img src="/images/twitterx.svg" alt="Twitter" />
             </a>
             <a href="#">
-              <img src="images/instagram.svg" alt="Instagram" />
+              <img src="/images/instagram.svg" alt="Instagram" />
             </a>
           </div>
         </div>

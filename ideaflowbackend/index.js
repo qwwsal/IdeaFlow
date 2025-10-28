@@ -321,3 +321,35 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Server started on http://localhost:${PORT}`);
 });
+
+// Получить отзывы пользователя
+app.get('/reviews', (req, res) => {
+  const userId = req.query.userId;
+  let sql = 'SELECT * FROM Reviews';
+  const params = [];
+  if (userId) {
+    sql += ' WHERE userId = ?';
+    params.push(userId);
+  }
+  db.all(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Ошибка при получении отзывов' });
+    res.json(rows);
+  });
+});
+
+// Добавить новый отзыв
+app.post('/reviews', (req, res) => {
+  const { userId, reviewerName, reviewerPhoto, text, rating } = req.body;
+  if (!userId || !text || !rating)
+    return res.status(400).json({ error: 'Не все обязательные поля заполнены' });
+
+  const sql = 'INSERT INTO Reviews (userId, reviewerName, reviewerPhoto, text, rating) VALUES (?, ?, ?, ?, ?)';
+  db.run(sql, [userId, reviewerName, reviewerPhoto, text, rating], function (err) {
+    if (err) return res.status(500).json({ error: 'Ошибка при добавлении отзыва' });
+
+    db.all('SELECT * FROM Reviews WHERE userId = ?', [userId], (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Ошибка при обновлении отзывов' });
+      res.json(rows);
+    });
+  });
+});

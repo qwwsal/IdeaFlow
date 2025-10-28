@@ -10,15 +10,14 @@ import ProfilePage from './pages/ProfilePage';
 import AddCasePage from './pages/AddCasePage';
 import PageFullCase from './pages/PageFullCase';
 import PageFullProject from './pages/PageFullProject';
+import ProfileView from './pages/ProfileView';
+
 
 function ProtectedRoute({ children }) {
-  // Проверяем наличие userId в localStorage для авторизации
   const userId = localStorage.getItem('userId');
-
   if (!userId) {
     return <Navigate to="/signin" replace />;
   }
-
   return children;
 }
 
@@ -37,7 +36,7 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/add-case" element={<AddCasePage />} />
 
-      {/* Защищённый маршрут профиля */}
+      {/* Защищённый маршрут профиля текущего пользователя */}
       <Route
         path="/profile"
         element={
@@ -46,6 +45,10 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+<Route path="/profileview/:userId" element={<ProfileView />} />
+
+      {/* Новый маршрут для профиля другого пользователя по :userId */}
+      <Route path="/profile/:userId" element={<ProfilePage />} />
 
       {/* Все остальные пути редиректим на главную */}
       <Route path="*" element={<Navigate to="/" replace />} />

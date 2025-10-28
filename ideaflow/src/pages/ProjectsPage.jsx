@@ -33,24 +33,23 @@ export default function ProjectsPage() {
     }
   };
 
- const filteredProjects = projects.filter(project => {
-  const lowerSearch = searchTerm.toLowerCase();
+  const filteredProjects = projects.filter(project => {
+    const lowerSearch = searchTerm.toLowerCase();
 
-  const matchesSearch =
-    (project.title?.toLowerCase() || '').includes(lowerSearch) ||
-    (project.theme?.toLowerCase() || '').includes(lowerSearch) ||
-    (project.description?.toLowerCase() || '').includes(lowerSearch) ||
-    (project.cover?.toLowerCase() || '').includes(lowerSearch) ||
-    (project.status?.toLowerCase() || '').includes(lowerSearch) ||
-    (project.executorEmail?.toLowerCase() || '').includes(lowerSearch) ||
-    (project.performerEmail?.toLowerCase() || '').includes(lowerSearch) ||
-    (project.topic?.toLowerCase() || '').includes(lowerSearch);
+    const matchesSearch =
+      (project.title?.toLowerCase() || '').includes(lowerSearch) ||
+      (project.theme?.toLowerCase() || '').includes(lowerSearch) ||
+      (project.description?.toLowerCase() || '').includes(lowerSearch) ||
+      (project.cover?.toLowerCase() || '').includes(lowerSearch) ||
+      (project.status?.toLowerCase() || '').includes(lowerSearch) ||
+      (project.executorEmail?.toLowerCase() || '').includes(lowerSearch) ||
+      (project.performerEmail?.toLowerCase() || '').includes(lowerSearch) ||
+      (project.topic?.toLowerCase() || '').includes(lowerSearch);
 
-  const matchesTopic = selectedTopics.length === 0 || selectedTopics.includes(project.topic);
+    const matchesTopic = selectedTopics.length === 0 || selectedTopics.includes(project.topic);
 
-  return matchesSearch && matchesTopic;
-});
-
+    return matchesSearch && matchesTopic;
+  });
 
   if (loading) return <p>Загрузка проектов...</p>;
 
@@ -125,22 +124,42 @@ export default function ProjectsPage() {
 
         <p className={styles.projectsRecommendation}>Рекомендации для вас</p>
         <div className={styles.projectsGrid}>
-         {filteredProjects.map(project => (
-  <Link to={`/projects/${project.id}`} key={project.id} className={styles.projectCardLink}>
-    <div className={styles.projectCard}>
-      <img
-        className={styles.projectImage}
-        src={`http://localhost:3001${project.cover || ''}`}
-        alt={`Фото исполнителя ${project.performerEmail}`}
-      />
-      <div className={styles.projectInfo}>
-          <div className={styles.projectTopic}>{project.theme || project.title}</div>
-          <div className={styles.projectTitle}>Название: {project.title}</div>
-          <div className={styles.projectStatus}>Статус: {project.status || 'неизвестен'}</div>
-        </div>
-    </div>
-  </Link>
-))}
+          {filteredProjects.map(project => (
+            <Link to={`/projects/${project.id}`} key={project.id} className={styles.projectCardLink}>
+              <div className={styles.projectCard}>
+                <img
+                  className={styles.projectImage}
+                  src={`http://localhost:3001${project.cover || ''}`}
+                  alt={`Фото исполнителя ${project.performerEmail}`}
+                />
+                <div className={styles.projectInfo}>
+                  <div className={styles.projectTopic}>{project.theme || project.title}</div>
+                  <div className={styles.projectTitle}>Название: {project.title}</div>
+                  <div className={styles.projectStatus}>Статус: {project.status || 'неизвестен'}</div>
+                  <div>
+                    Заказчик:{' '}
+                    {project.userId ? (
+                      <Link to={`/profile/${project.userId}`}>
+                        {project.performerEmail || 'Не указан'}
+                      </Link>
+                    ) : (
+                      project.performerEmail || 'Не указан'
+                    )}
+                  </div>
+                  <div>
+                    Исполнитель:{' '}
+                    {project.executorId ? (
+                      <Link to={`/profile/${project.executorId}`}>
+                        {project.executorEmail || 'Не указан'}
+                      </Link>
+                    ) : (
+                      project.executorEmail || 'Не указан'
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
       </main>
 
@@ -155,9 +174,9 @@ export default function ProjectsPage() {
             <p>+7 (123) 456-78-90</p>
           </div>
           <div className={styles.footerSocials}>
-            <a href="#"><img src="images/facebook.svg" alt="Facebook" /> </a>
-            <a href="#"><img src="images/twitterx.svg" alt="Twitter" /> </a>
-            <a href="#"><img src="images/instagram.svg" alt="Instagram" /> </a>
+            <a href="#"><img src="images/facebook.svg" alt="Facebook" /></a>
+            <a href="#"><img src="images/twitterx.svg" alt="Twitter" /></a>
+            <a href="#"><img src="images/instagram.svg" alt="Instagram" /></a>
           </div>
         </div>
         <p style={{ fontSize: 20, textAlign: 'center', marginTop: 10 }}>

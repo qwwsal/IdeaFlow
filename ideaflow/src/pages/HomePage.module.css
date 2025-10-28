@@ -56,16 +56,16 @@ background-color:#0E900E;
 .sectionIntro img {
 
   height: 100%;
-  position: absolute; /* позиционирование */
-  bottom: 0; /* прилипание к низу */
-  left: 0; /* или центрировать с помощью left/right/margin */
+  position: absolute; 
+  bottom: 0; 
+  left: 0; 
 }
 
 .sectionIntro .textContainer {
   display: flex;
   flex-direction: column;
-  justify-content: center; /* центрирует по вертикали текст */
-  flex: 1; /* занимает оставшееся место справа */
+  justify-content: center; 
+  flex: 1; 
 }
 
 .sectionIntro h1 {
@@ -106,8 +106,6 @@ background-color:#0E900E;
   font-size: 30px;
   transition: background-color 0.3s, color 0.3s;
 }
-
-/* убираем radius из css, он теперь в инлайне для каждого таба */
 
 .projectsGrid {
   color: #0E900E;
@@ -172,8 +170,8 @@ background-color:#0E900E;
   margin-right: auto;
   display: flex;
   align-items: flex-start;
-  justify-content: space-between; /* делает максимальный отступ между текстом и картинкой */
-  padding: 20px 20px 0 20px; /* добавьте паддинг, если нужно */
+  justify-content: space-between; 
+  padding: 20px 20px 0 20px; 
 }
 
 .sectionHelp p {
@@ -182,15 +180,15 @@ background-color:#0E900E;
   font-size: 30px;
   line-height: 1.3;
   margin-top: 50px;
-  margin-right: 20px; /* отступ справа от текста */
+  margin-right: 20px; 
 }
 
 .sectionHelp img {
   width: auto;
   height: 70%;
-  max-width: 40%; /* ограничит ширину картины */
+  max-width: 40%; 
   object-fit: contain;
-  align-self: flex-end; /* прижмет картинку к низу блока, если нужно */
+  align-self: flex-end; 
 }
 
 .sectionPartnership {
@@ -198,7 +196,7 @@ background-color:#0E900E;
   color: #0E900E;
   padding: 40px;
   margin-top: 0;
-  border-radius: 20px; /* убираем скругление, чтобы не дробить по краям */
+  border-radius: 20px; 
   position: relative; 
   font-weight: bold;
   text-align: center;

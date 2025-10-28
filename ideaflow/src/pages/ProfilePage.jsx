@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { FaStar } from 'react-icons/fa';
 import styles from './ProfilePage.module.css';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const { userId: paramUserId } = useParams();
 
-  const [userId, setUserId] = useState(null);
+  // Использовать userId из параметра роутинга, если есть, иначе из localStorage (для своего профиля)
+  const [userId, setUserId] = useState(paramUserId || localStorage.getItem('userId'));
   const [userEmail, setUserEmail] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('projects');
@@ -25,22 +27,18 @@ export default function ProfilePage() {
   const [inProcessExecutorCases, setInProcessExecutorCases] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState({});
 
-  const [reviews, setReviews] = useState([
-    { id: 1, username: 'ivanov', name: 'Иван Иванов', photo: '/images/photo2.jpg', text: 'Отличная работа!', rating: 5 },
-    { id: 2, username: 'petrov', name: 'Пётр Петров', photo: '/images/photo1.jpg', text: 'Очень доволен!', rating: 4 },
-  ]);
+  const [reviews, setReviews] = useState([]);
   const [newReviewText, setNewReviewText] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
 
   useEffect(() => {
-    const id = localStorage.getItem('userId');
-    if (!id) {
+    if (!userId) {
       navigate('/signin');
       return;
     }
-    setUserId(id);
-  }, [navigate]);
+    setUserId(userId);
+  }, [navigate, userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -66,72 +64,65 @@ export default function ProfilePage() {
       }
     };
 
-const fetchProjectsAsCustomer = async () => {
-  try {
-    // Получаем проекты пользоватлея
-    const resProjects = await fetch(`http://localhost:3001/projects?userId=${userId}`);
-    if (!resProjects.ok) throw new Error('Ошибка загрузки проектов как заказчика');
-    const projectsDataRaw = await resProjects.json();
+    const fetchProjectsAsCustomer = async () => {
+      try {
+        const resProjects = await fetch(`http://localhost:3001/projects?userId=${userId}`);
+        if (!resProjects.ok) throw new Error('Ошибка загрузки проектов как заказчика');
+        const projectsDataRaw = await resProjects.json();
+        const projectsData = projectsDataRaw.filter(p => p.status === 'closed');
 
-    // Фильтруем проекты по статусу closed
-    const projectsData = projectsDataRaw.filter(p => p.status === 'closed');
+        const resCases = await fetch(`http://localhost:3001/cases?userId=${userId}`);
+        if (!resCases.ok) throw new Error('Ошибка загрузки кейсов заказчика');
+        const casesDataRaw = await resCases.json();
+        const casesData = casesDataRaw.filter(c => c.status === 'open');
 
-    // Получаем открытые кейсы
-    const resCases = await fetch(`http://localhost:3001/cases?userId=${userId}`);
-    if (!resCases.ok) throw new Error('Ошибка загрузки кейсов заказчика');
-    const casesDataRaw = await resCases.json();
+        const combined = [...casesData, ...projectsData];
+        combined.sort((a, b) => {
+          if (a.status === 'open' && b.status !== 'open') return -1;
+          if (a.status !== 'open' && b.status === 'open') return 1;
+          return 0;
+        });
+        setProjectsAsCustomer(combined);
+      } catch (error) {
+        console.error('Ошибка при загрузке проектов и кейсов:', error);
+        setProjectsAsCustomer([]);
+      }
+    };
 
-    // Фильтруем кейсы по статусу open
-    const casesData = casesDataRaw.filter(c => c.status === 'open');
-
-    // Объединяем кейсы и проекты
-    const combined = [...casesData, ...projectsData];
-
-    // Сортируем так, чтобы открытые кейсы были сверху
-    combined.sort((a, b) => {
-      if (a.status === 'open' && b.status !== 'open') return -1;
-      if (a.status !== 'open' && b.status === 'open') return 1;
-      return 0;
-    });
-
-    setProjectsAsCustomer(combined);
-  } catch (error) {
-    console.error('Ошибка при загрузке проектов и кейсов:', error);
-    setProjectsAsCustomer([]);
-  }
-};
-
-
-
-    // Завершенные проекты пользователя как исполнитель по executorId и статусу 'closed'
     const fetchCompletedExecutorProjects = async () => {
-   try {
-    const res = await fetch(`http://localhost:3001/projects?executorEmail=${encodeURIComponent(userEmail)}`);
-    if (!res.ok) throw new Error('Ошибка загрузки проектов исполнителя');
-    const data = await res.json();
+      try {
+        const res = await fetch(`http://localhost:3001/projects?executorEmail=${encodeURIComponent(userEmail)}`);
+        if (!res.ok) throw new Error('Ошибка загрузки проектов исполнителя');
+        const data = await res.json();
+        const closedProjects = data.filter(p => p.status === 'closed');
+        setCompletedExecutorProjects(closedProjects);
+      } catch {
+        setCompletedExecutorProjects([]);
+      }
+    };
 
-    // Оставляем только завершённые проекты
-    const closedProjects = data.filter(p => p.status === 'closed');
-    setCompletedExecutorProjects(closedProjects);
-  } catch {
-    setCompletedExecutorProjects([]);
-  }
-};
-
-    // Принятые кейсы из ProcessedCases с executorId=userId, статус 'in_process'
     const fetchInProcessExecutorCases = async () => {
       try {
         const res = await fetch(`http://localhost:3001/processed-cases`);
         if (!res.ok) throw new Error('Ошибка загрузки принятых кейсов');
         const data = await res.json();
-
         const filtered = data.filter(
           c => c.executorId === Number(userId) && c.status === 'in_process'
         );
-
         setInProcessExecutorCases(filtered);
       } catch {
         setInProcessExecutorCases([]);
+      }
+    };
+
+    const fetchReviews = async () => {
+      try {
+        const response = await fetch(`http://localhost:3001/reviews?userId=${userId}`);
+        if (!response.ok) throw new Error('Ошибка загрузки отзывов');
+        const data = await response.json();
+        setReviews(data);
+      } catch (err) {
+        console.error(err);
       }
     };
 
@@ -139,8 +130,9 @@ const fetchProjectsAsCustomer = async () => {
       fetchProjectsAsCustomer();
       fetchCompletedExecutorProjects();
       fetchInProcessExecutorCases();
+      fetchReviews();
     });
-  }, [userId]);
+  }, [userId, userEmail, navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('userId');
@@ -264,20 +256,32 @@ const fetchProjectsAsCustomer = async () => {
     }
   };
 
-  const handleAddReview = () => {
+  // Новый handleAddReview с отправкой на сервер
+  const handleAddReview = async () => {
     if (newReviewText.trim() === '' || newReviewRating === 0) return;
+
     const newReview = {
-      id: reviews.length + 1,
-      username: formData.username || 'anonymous',
-      name: `${formData.firstName} ${formData.lastName}`.trim() || 'Anonymous',
-      photo: formData.photo || '',
+      userId,
+      reviewerName: `${formData.firstName} ${formData.lastName}`.trim() || 'Anonymous',
+      reviewerPhoto: formData.photo || '',
       text: newReviewText.trim(),
       rating: newReviewRating,
     };
-    setReviews([...reviews, newReview]);
-    setNewReviewText('');
-    setNewReviewRating(0);
-    setHoverRating(0);
+
+    try {
+      const res = await fetch('http://localhost:3001/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReview),
+      });
+      if (!res.ok) throw new Error('Ошибка добавления отзыва');
+      setNewReviewText('');
+      setNewReviewRating(0);
+      const updatedReviews = await res.json();
+      setReviews(updatedReviews);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const renderStars = rating => (
@@ -294,128 +298,169 @@ const fetchProjectsAsCustomer = async () => {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      
       case 'projects':
         return (
           <>
-          <h3 className={styles.projectsTitle}>Проекты пользователя (заказчик)</h3>
-          <div className={`${styles.tabContent} ${styles.projectsTab}`}>
-            {projectsAsCustomer.map((p) => (
-          <div key={p.id} className={styles.projectCard}>
-        {p.status === 'open' ? (
-        <Link to={`/cases/${p.id}`} className={styles.casesLink}>
-        <img
-          src={`http://localhost:3001${p.cover || ''}`}
-          alt={`Фото исполнителя ${p.executorEmail || 'Не указан'}`}
-          className={styles.projectImage}
-        />
-        <div className={styles.projectInfo}>
-          <div className={styles.projectTopic}>{p.theme || p.title}</div>
-          <div className={styles.projectTitle}>Название: {p.title}</div>
-          <div className={styles.projectStatus}>Статус: {p.status || 'неизвестен'}</div>
-        </div>
-      </Link>
-      ) : (
-      <Link to={`/projects/${p.id}`} className={styles.projectLink}>
-        <img
-          src={`http://localhost:3001${p.cover || ''}`}
-          alt={`Фото исполнителя ${p.executorEmail || 'Не указан'}`}
-          className={styles.projectImage}
-        />
-        <div className={styles.projectInfo}>
-          <div className={styles.projectPerformer}>
-            Исполнитель: {p.executorEmail || 'Не указан'}
-          </div>
-          <div className={styles.projectTopic}>{p.theme || p.title}</div>
-          <div className={styles.projectTitle}>Название: {p.title}</div>
-          <div className={styles.projectStatus}>Статус: {p.status || 'неизвестен'}</div>
-        </div>
-      </Link>
-    )}
-  </div>
-))}
-          </div>
-       </> );
-      case 'cases':
-  return (
-    <div className={`${styles.tabContent} ${styles.casesTab}`}>
-      <h3>Завершённые проекты пользователя (исполнитель)</h3>
-      {completedExecutorProjects.length === 0 ? (
-        <p>Пока пусто</p>
-      ) : (
-        <div className={styles.casesGrid}>
-          {completedExecutorProjects.map(proj => (
-            <div key={proj.id} className={styles.caseCard}>
-              <Link to={`/projects/${proj.id}`} key={proj.id} className={styles.projCardLink}>
-                  <div className={styles.projectCard}>
-                    <img
-                      className={styles.projectImage}
-                      src={`http://localhost:3001${proj.cover || ''}`}
-                      alt={`Фото исполнителя ${proj.performerEmail}`}
-                    />
-                    <div className={styles.projectInfo}>
-                        <div className={styles.projectTopic}>{proj.theme || proj.title}</div>
-                        <div className={styles.projectTitle}>Название: {proj.title}</div>
-                        <div className={styles.projectStatus}>Статус: {proj.status || 'неизвестен'}</div>
+            <h3 className={styles.projectsTitle}>Проекты пользователя (заказчик)</h3>
+            <div className={`${styles.tabContent} ${styles.projectsTab}`}>
+              {projectsAsCustomer.map((p) => (
+                <div key={p.id} className={styles.projectCard}>
+                  {p.status === 'open' ? (
+                    <Link to={`/cases/${p.id}`} className={styles.casesLink}>
+                      <img
+                        src={`http://localhost:3001${p.cover || ''}`}
+                        alt={`Фото исполнителя ${p.executorEmail || 'Не указан'}`}
+                        className={styles.projectImage}
+                      />
+                      <div className={styles.projectInfo}>
+                        <div className={styles.projectTopic}>{p.theme || p.title}</div>
+                        <div className={styles.projectTitle}>Название: {p.title}</div>
+                        <div className={styles.projectStatus}>Статус: {p.status || 'неизвестен'}</div>
                       </div>
-                  </div>
-                </Link>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-      case 'reviews':
-        return (
-          <div className={styles.reviewContainer}>
-            <h3>
-              Отзывы пользователя{' '}
-              <span style={{ fontFamily: 'Arial', fontWeight: 'normal', fontSize: '1rem', marginLeft: '10px' }}>
-                ({averageRating} ★)
-              </span>
-            </h3>
-            <div className={styles.reviewListCustom}>
-              {reviews.map((r) => (
-                <div key={r.id} className={styles.reviewItemCustom}>
-                  <div className={styles.reviewPhotoCustom}>
-                    {r.photo ? <img src={r.photo} alt={r.name} /> : <div className={styles.userPhotoPlaceholderCustom}></div>}
-                  </div>
-                  <div>
-                    <b>{r.name}</b>
-                    <p>{r.text}</p>
-                    <div>{renderStars(r.rating)}</div>
-                  </div>
+                    </Link>
+                  ) : (
+                    <Link to={`/projects/${p.id}`} className={styles.projectLink}>
+                      <img
+                        src={`http://localhost:3001${p.cover || ''}`}
+                        alt={`Фото исполнителя ${p.executorEmail || 'Не указан'}`}
+                        className={styles.projectImage}
+                      />
+                      <div className={styles.projectInfo}>
+                        <div className={styles.projectPerformer}>
+                          Исполнитель: {p.executorEmail || 'Не указан'}
+                        </div>
+                        <div className={styles.projectTopic}>{p.theme || p.title}</div>
+                        <div className={styles.projectTitle}>Название: {p.title}</div>
+                        <div className={styles.projectStatus}>Статус: {p.status || 'неизвестен'}</div>
+                      </div>
+                    </Link>
+                  )}
                 </div>
               ))}
             </div>
-            <div className={styles.reviewFormCustom}>
-              <textarea
-                placeholder="Оставьте отзыв..."
-                value={newReviewText}
-                onChange={(e) => setNewReviewText(e.target.value)}
-              />
-              <div className={styles.ratingStars}>
-                {[...Array(5)].map((_, index) => {
-                  const starValue = index + 1;
-                  return (
-                    <FaStar
-                      key={index}
-                      size={24}
-                      style={{ cursor: 'pointer' }}
-                      color={starValue <= (hoverRating || newReviewRating) ? '#ffbe5a' : '#ccc'}
-                      onClick={() => setNewReviewRating(starValue)}
-                      onMouseEnter={() => setHoverRating(starValue)}
-                      onMouseLeave={() => setHoverRating(0)}
-                    />
-                  );
-                })}
+          </>
+        );
+      case 'cases':
+        return (
+          <div className={`${styles.tabContent} ${styles.casesTab}`}>
+            <h3>Завершённые проекты пользователя (исполнитель)</h3>
+            {completedExecutorProjects.length === 0 ? (
+              <p>Пока пусто</p>
+            ) : (
+              <div className={styles.casesGrid}>
+                {completedExecutorProjects.map(proj => (
+                  <div key={proj.id} className={styles.caseCard}>
+                    <Link to={`/projects/${proj.id}`} key={proj.id} className={styles.projCardLink}>
+                      <div className={styles.projectCard}>
+                        <img
+                          className={styles.projectImage}
+                          src={`http://localhost:3001${proj.cover || ''}`}
+                          alt={`Фото исполнителя ${proj.performerEmail}`}
+                        />
+                        <div className={styles.projectInfo}>
+                          <div className={styles.projectTopic}>{proj.theme || proj.title}</div>
+                          <div className={styles.projectTitle}>Название: {proj.title}</div>
+                          <div className={styles.projectStatus}>Статус: {proj.status || 'неизвестен'}</div>
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
+                ))}
               </div>
-              <button onClick={handleAddReview}>Добавить отзыв</button>
-            </div>
+            )}
           </div>
         );
+        case 'reviews':
+  return (
+    <div className={styles.reviewContainer}>
+      <h3>
+        Отзывы пользователя{' '}
+        <span style={{ fontFamily: 'Arial', fontWeight: 'normal', fontSize: '1rem', marginLeft: '10px' }}>
+          ({averageRating} ★)
+        </span>
+      </h3>
+      <div className={styles.reviewListCustom}>
+        {reviews.length === 0 ? (
+          <p>Пока нет отзывов</p>
+        ) : (
+          reviews.map((r) => (
+            <div key={r.id} className={styles.reviewItemCustom}>
+              <div className={styles.reviewPhotoCustom}>
+                {r.reviewerPhoto ? (
+                  <img src={r.reviewerPhoto} alt={r.reviewerName} />
+                ) : (
+                  <div className={styles.userPhotoPlaceholderCustom}></div>
+                )}
+              </div>
+              <div>
+                <b>{r.reviewerName}</b>
+                <p>{r.text}</p>
+                <div>{renderStars(r.rating)}</div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+      // case 'reviews':
+      //   return (
+      //     <div className={styles.reviewContainer}>
+      //       <h3>
+      //         Отзывы пользователя{' '}
+      //         <span style={{ fontFamily: 'Arial', fontWeight: 'normal', fontSize: '1rem', marginLeft: '10px' }}>
+      //           ({averageRating} ★)
+      //         </span>
+      //       </h3>
+      //       <div className={styles.reviewListCustom}>
+      //         {reviews.length === 0 ? (
+      //           <p>Пока нет отзывов</p>
+      //         ) : (
+      //           reviews.map((r) => (
+      //             <div key={r.id} className={styles.reviewItemCustom}>
+      //               <div className={styles.reviewPhotoCustom}>
+      //                 {r.reviewerPhoto ? (
+      //                   <img src={r.reviewerPhoto} alt={r.reviewerName} />
+      //                 ) : (
+      //                   <div className={styles.userPhotoPlaceholderCustom}></div>
+      //                 )}
+      //               </div>
+      //               <div>
+      //                 <b>{r.reviewerName}</b>
+      //                 <p>{r.text}</p>
+      //                 <div>{renderStars(r.rating)}</div>
+      //               </div>
+      //             </div>
+      //           ))
+      //         )}
+      //       </div>
+      //       <div className={styles.reviewFormCustom}>
+      //         <textarea
+      //           placeholder="Оставьте отзыв..."
+      //           value={newReviewText}
+      //           onChange={(e) => setNewReviewText(e.target.value)}
+      //         />
+      //         <div className={styles.ratingStars}>
+      //           {[...Array(5)].map((_, index) => {
+      //             const starValue = index + 1;
+      //             return (
+      //               <FaStar
+      //                 key={index}
+      //                 size={24}
+      //                 style={{ cursor: 'pointer' }}
+      //                 color={starValue <= (hoverRating || newReviewRating) ? '#ffbe5a' : '#ccc'}
+      //                 onClick={() => setNewReviewRating(starValue)}
+      //                 onMouseEnter={() => setHoverRating(starValue)}
+      //                 onMouseLeave={() => setHoverRating(0)}
+      //               />
+      //             );
+      //           })}
+      //         </div>
+      //         <button onClick={handleAddReview}>Добавить отзыв</button>
+      //       </div>
+      //     </div>
+      //   );
       default:
         return null;
     }
@@ -601,4 +646,3 @@ const fetchProjectsAsCustomer = async () => {
     </>
   );
 }
-
